@@ -24,18 +24,8 @@ jobs:
       - name: Download allowed_ids.txt
         run: |
           curl -sSf \
-            https://raw.githubusercontent.com/coddrago/modules-web/refs/heads/main/mods/ids/allowed_ids.txt \
+            https://raw.githubusercontent.com/coddrago/modules-web/main/mods/ids/allowed_ids.txt \
             -o allowed_ids.txt || true
-
-      - name: Extract last ID
-        id: extract
-        run: |
-          if [ -s allowed_ids.txt ]; then
-            LAST_ID=$(tail -n 1 allowed_ids.txt | tr -d '\r\n')
-          else
-            LAST_ID=""
-          fi
-          echo "id=${LAST_ID}" >> $GITHUB_OUTPUT
 
       - name: Ensure base.json exists
         run: |
@@ -43,16 +33,23 @@ jobs:
             echo "{}" > base.json
           fi
 
-      - name: Add last ID entry (if present)
+      - name: Add IDs from allowed_ids.txt (if present)
         run: |
-          ID="${{ steps.extract.outputs.id }}"
-          if [ -n "$ID" ]; then
-            jq --arg key "$ID" \
-               --arg name "Heroku Beta-Tester: https://github.com/coddrago/Heroku" \
-               --argjson emoji 5134452506935427991 \
-               '.[$key] = { "emoji": $emoji, "name": $name }' \
-               base.json > base_tmp.json && mv base_tmp.json base.json
+          if [ ! -s allowed_ids.txt ]; then
+            echo "allowed_ids.txt is empty or missing."
+            exit 0
           fi
+          # Normalize whitespace (spaces, tabs, \r\n) to single newlines and filter non-empty
+          tr -s '[:space:]\r\n' '\n' < allowed_ids.txt | grep -v '^$' | while IFS= read -r ID; do
+            if [ -n "$ID" ]; then
+              echo "Adding ID: $ID"
+              jq --arg key "$ID" \
+                 --arg name "Heroku Beta-Tester: https://github.com/coddrago/Heroku" \
+                 --argjson emoji 5134452506935427991 \
+                 '.[$key] = { "emoji": $emoji, "name": $name }' \
+                 base.json > base_tmp.json && mv base_tmp.json base.json || echo "Failed to add $ID"
+            fi
+          done
 
       - name: Create forced Heroku entries
         run: |
