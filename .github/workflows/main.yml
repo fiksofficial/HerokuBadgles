@@ -1,0 +1,108 @@
+name: Update base.json (forced Heroku entries + global emoji)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+  push:
+    branches:
+      - main
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+
+      - name: Download allowed_ids.txt
+        run: |
+          curl -sSf \
+            https://raw.githubusercontent.com/coddrago/modules-web/refs/heads/main/mods/ids/allowed_ids.txt \
+            -o allowed_ids.txt || true
+
+      - name: Extract last ID
+        id: extract
+        run: |
+          if [ -s allowed_ids.txt ]; then
+            LAST_ID=$(tail -n 1 allowed_ids.txt | tr -d '\r\n')
+          else
+            LAST_ID=""
+          fi
+          echo "id=${LAST_ID}" >> $GITHUB_OUTPUT
+
+      - name: Ensure base.json exists
+        run: |
+          if [ ! -f base.json ]; then
+            echo "{}" > base.json
+          fi
+
+      - name: Add last ID entry (if present)
+        run: |
+          ID="${{ steps.extract.outputs.id }}"
+          if [ -n "$ID" ]; then
+            jq --arg key "$ID" \
+               --arg name "Heroku Beta-Tester: https://github.com/coddrago/Heroku" \
+               --argjson emoji 5134452506935427991 \
+               '.[$key] = { "emoji": $emoji, "name": $name }' \
+               base.json > base_tmp.json && mv base_tmp.json base.json
+          fi
+
+      - name: Create forced Heroku entries
+        run: |
+          cat > force.json <<'EOF'
+{
+  "1844394486":  { "name": "Official Hosting Heroku: jh.kamekuro.ru" },
+  "1714120111":  { "name": "Founder Heroku: https://github.com/coddrago/Heroku" },
+  "1226061708":  { "name": "Official Dev Heroku: https://github.com/coddrago/Heroku" },
+  "3151451321":  { "name": "Official Beta Heroku: https://github.com/coddrago/Heroku" },
+  "2445389036":  { "name": "Official Chat Heroku: https://github.com/coddrago/Heroku" },
+  "2410964167":  { "name": "Official Chat Heroku: https://github.com/coddrago/Heroku" },
+  "2341345589":  { "name": "Official Chat Heroku: https://github.com/coddrago/Heroku" },
+  "2333076720":  { "name": "Official Channel Heroku: https://github.com/coddrago/Heroku" }
+}
+EOF
+
+      - name: Merge forced entries (force override)
+        run: |
+          jq -s '
+            .[0] as $base |
+            .[1] as $force |
+            ($base + ($force | with_entries(.value += {emoji: 5134452506935427991})))
+          ' base.json force.json > base_tmp.json
+
+          mv base_tmp.json base.json
+          rm force.json
+
+      - name: Set emoji=5134452506935427991 for ALL entries
+        run: |
+          jq '
+            to_entries
+            | map(.value.emoji = 5134452506935427991 | .)
+            | from_entries
+          ' base.json > base_tmp.json
+
+          mv base_tmp.json base.json
+
+      - name: Commit and push
+        env:
+          GIT_AUTHOR_NAME: "github-actions[bot]"
+          GIT_AUTHOR_EMAIL: "github-actions[bot]@users.noreply.github.com"
+        run: |
+          git config user.name "$GIT_AUTHOR_NAME"
+          git config user.email "$GIT_AUTHOR_EMAIL"
+
+          git add base.json
+          if git diff --quiet --cached; then
+            echo "No changes."
+            exit 0
+          fi
+
+          git commit -m "Update base.json with forced Heroku entries and global emoji"
+          git push
