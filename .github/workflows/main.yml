@@ -56,18 +56,16 @@ jobs:
 
       - name: Create forced Heroku entries
         run: |
-          cat > force.json <<'EOF'
-{
-  "1844394486":  { "name": "Official Hosting Heroku: jh.kamekuro.ru" },
-  "1714120111":  { "name": "Founder Heroku: https://github.com/coddrago/Heroku" },
-  "1226061708":  { "name": "Official Dev Heroku: https://github.com/coddrago/Heroku" },
-  "3151451321":  { "name": "Official Beta Heroku: https://github.com/coddrago/Heroku" },
-  "2445389036":  { "name": "Official Chat Heroku: https://github.com/coddrago/Heroku" },
-  "2410964167":  { "name": "Official Chat Heroku: https://github.com/coddrago/Heroku" },
-  "2341345589":  { "name": "Official Chat Heroku: https://github.com/coddrago/Heroku" },
-  "2333076720":  { "name": "Official Channel Heroku: https://github.com/coddrago/Heroku" }
-}
-EOF
+          echo '{' > force.json
+          echo '  "1844394486":  { "name": "Official Hosting Heroku: jh.kamekuro.ru" },' >> force.json
+          echo '  "1714120111":  { "name": "Founder Heroku: https://github.com/coddrago/Heroku" },' >> force.json
+          echo '  "1226061708":  { "name": "Official Dev Heroku: https://github.com/coddrago/Heroku" },' >> force.json
+          echo '  "3151451321":  { "name": "Official Beta Heroku: https://github.com/coddrago/Heroku" },' >> force.json
+          echo '  "2445389036":  { "name": "Official Chat Heroku: https://github.com/coddrago/Heroku" },' >> force.json
+          echo '  "2410964167":  { "name": "Official Chat Heroku: https://github.com/coddrago/Heroku" },' >> force.json
+          echo '  "2341345589":  { "name": "Official Chat Heroku: https://github.com/coddrago/Heroku" },' >> force.json
+          echo '  "2333076720":  { "name": "Official Channel Heroku: https://github.com/coddrago/Heroku" }' >> force.json
+          echo '}' >> force.json
 
       - name: Merge forced entries (force override)
         run: |
